@@ -1,3 +1,13 @@
+@font-face {
+	font-family: 'FlappybirdyRegular-KaBW';
+	src: url('/fonts/FlappybirdyRegular-KaBW.ttf') format('truetype');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+	/*  load font in static/fonts/FlappybirdyRegular-KaBW.ttf */
+	font-family: 'FlappybirdyRegular-KaBW';
+}
