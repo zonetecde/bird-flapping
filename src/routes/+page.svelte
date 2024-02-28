@@ -2,15 +2,15 @@
 	import type PipeData from '$lib/PipeData';
 	import Pipe from '$lib/Pipe.svelte';
 	import { onDestroy, onMount } from 'svelte';
-	import GlobalVar from '$lib';
+	import GlobalVar, { randomInRange } from '$lib';
 
 	const BG_TRANSLATION_SPEED = 2000;
 	const BASE_TRANSLATION_SPEED = 800;
+	const BIRD_SPEED = 200;
 
 	let pipes: PipeData[] = [];
 
 	let birdY = 50;
-	const BIRD_SPEED = 600;
 	let currentBirdImg = '/objects/yellowbird-midflap.png';
 	let lastFlapTimestamp: Date;
 	let birdPivot = 0;
@@ -23,12 +23,19 @@
 
 	onMount(() => {
 		window.onkeydown = handleKeyDown;
+		window.onmousedown = handleMouseDown;
 
 		addPipes();
 	});
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.code === 'Space') {
+			flap();
+		}
+	}
+
+	function handleMouseDown(event: MouseEvent) {
+		if (event.button === 0) {
 			flap();
 		}
 	}
@@ -110,26 +117,46 @@
 		lastFlapTimestamp = new Date();
 	}
 
+	function getBaseY() {
+		// On fait commencer la hauteur du pipe de dessus selon la taille de la fenêtre
+		let window_height = window.innerHeight;
+
+		if (window_height < 500) return window_height / 0.6;
+		if (window_height < 700) return window_height / 0.9;
+		if (window_height < 1000) return window_height / 1.35;
+
+		return window_height / 3;
+	}
+
 	/**
 	 * Ajoute les pipes
 	 */
 	function addPipes() {
-		const HAUTEUR_ESPACE = '150px';
+		const HAUTEUR_ESPACE_PX = 180;
 
 		let xPos = 60; // Position de départ en pourcentage
 
-		for (let i = 0; i < 4; i++) {
-			// Trouve les deux coordonnées Y telles que l'espacement entre les deux soit de 30m
+		const maxY = window.innerHeight - window.innerHeight * 0.3 - HAUTEUR_ESPACE_PX - 30; // Où 30% = taille de la base
+
+		for (let i = 0; i < 50; i++) {
+			// Position du pipe du haut
+			const randomY = randomInRange(0, maxY);
+
+			// Taille de l'espace
+			let diff = randomInRange(-65, 0);
+
 			pipes = [
 				...pipes,
 				{
 					xPos: xPos,
-					yPos: '0px',
+					// Calcul de la position du pipe du haut
+					yPos: `-${getBaseY()}px + ${randomY}px`,
 					direction: 'DOWN'
 				},
 				{
 					xPos: xPos,
-					yPos: `${GlobalVar.HAUTEUR_PIPE} + ${HAUTEUR_ESPACE}`,
+					// Calcul de la position du pipe du bas
+					yPos: `-${getBaseY()}px + ${GlobalVar.HAUTEUR_PIPE} + ${HAUTEUR_ESPACE_PX + diff}px + ${randomY}px`,
 					direction: 'UP'
 				}
 			];
@@ -141,13 +168,17 @@
 
 <div id="bg" class="w-screen h-screen" style="background-position-x: -{bgTranslation}%;" />
 
-<div id="base" class="w-screen h-[20%] z-20" style="background-position-x: -{baseTranslation}%;" />
+<div
+	id="base"
+	class="w-screen h-[20%] z-20"
+	style="background-position-x: -{baseTranslation * 1.3}%;"
+/>
 
 {#if isRunning}
 	<img
 		src={currentBirdImg}
 		alt="Bird"
-		class="absolute left-[20%] w-[5%] object-contain transform"
+		class="absolute left-[20%] w-[50px] object-contain transform"
 		style="top: {birdY}%; transform: rotate({birdPivot}deg);"
 	/>
 
@@ -155,7 +186,7 @@
 		<Pipe
 			direction={pipe.direction}
 			classes="absolute z-10"
-			css={`left: ${pipe.xPos}%; top: calc(${pipe.yPos})`}
+			css={`left: calc(${pipe.xPos}% - ${baseTranslation}%); top: calc(${pipe.yPos})`}
 		/>
 	{/each}
 {/if}

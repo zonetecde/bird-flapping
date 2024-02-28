@@ -9,8 +9,8 @@
 </script>
 
 <img
-	src="objects/pipe-green.png"
+	src="objects/pipe.png"
 	alt="pipe"
-	class="w-[4%] h-[{GlobalVar.HAUTEUR_PIPE}] {classes}"
-	{style}
+	class="w-[60px] {classes}"
+	style="height: {GlobalVar.HAUTEUR_PIPE}; {style}"
 />
