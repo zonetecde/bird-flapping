@@ -1,15 +1,20 @@
 <script lang="ts">
-	import Pipe from '$lib/pipe.svelte';
+	import type PipeData from '$lib/PipeData';
+	import Pipe from '$lib/Pipe.svelte';
 	import { onDestroy, onMount } from 'svelte';
+	import GlobalVar from '$lib';
 
 	const BG_TRANSLATION_SPEED = 2000;
-	const BASE_TRANSLATION_SPEED = 1000;
+	const BASE_TRANSLATION_SPEED = 800;
+
+	let pipes: PipeData[] = [];
 
 	let birdY = 50;
 	const BIRD_SPEED = 600;
 	let currentBirdImg = '/objects/yellowbird-midflap.png';
 	let lastFlapTimestamp: Date;
 	let birdPivot = 0;
+	let birdDirection: 'UP' | 'DOWN';
 
 	let isRunning = true;
 	let bgTranslation = 0;
@@ -18,6 +23,8 @@
 
 	onMount(() => {
 		window.onkeydown = handleKeyDown;
+
+		addPipes();
 	});
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -57,7 +64,7 @@
 			// Le + 5 sert à laisser l'oiseau sur place un petit peu
 			if (difference > BIRD_SPEED + 5) {
 				// L'oiseau descend
-				birdPivot = 12;
+				birdDirection = 'DOWN';
 
 				if (difference > BIRD_SPEED + BIRD_SPEED / 2) birdY += 0.5;
 				else birdY += 0.4;
@@ -65,8 +72,7 @@
 				currentBirdImg = '/objects/yellowbird-downflap.png';
 			} else if (difference < BIRD_SPEED) {
 				// L'oiseau monte
-
-				birdPivot = -12;
+				birdDirection = 'UP';
 
 				currentBirdImg = '/objects/yellowbird-upflap.png';
 
@@ -74,6 +80,14 @@
 					birdY -= 0.8; // Vélocité
 				else if (difference < BIRD_SPEED / 2) birdY -= 0.65;
 				else birdY -= 0.5;
+			}
+
+			// Update bird direction
+			if (birdDirection === 'UP') {
+				if (birdPivot >= -12) birdPivot -= 4;
+			}
+			if (birdDirection === 'DOWN') {
+				if (birdPivot <= 16) birdPivot += 4;
 			}
 		}
 
@@ -95,15 +109,39 @@
 		// Flap
 		lastFlapTimestamp = new Date();
 	}
+
+	/**
+	 * Ajoute les pipes
+	 */
+	function addPipes() {
+		const HAUTEUR_ESPACE = '150px';
+
+		let xPos = 60; // Position de départ en pourcentage
+
+		for (let i = 0; i < 4; i++) {
+			// Trouve les deux coordonnées Y telles que l'espacement entre les deux soit de 30m
+			pipes = [
+				...pipes,
+				{
+					xPos: xPos,
+					yPos: '0px',
+					direction: 'DOWN'
+				},
+				{
+					xPos: xPos,
+					yPos: `${GlobalVar.HAUTEUR_PIPE} + ${HAUTEUR_ESPACE}`,
+					direction: 'UP'
+				}
+			];
+
+			xPos += 35; // Prochaine pipe dans 35%
+		}
+	}
 </script>
 
 <div id="bg" class="w-screen h-screen" style="background-position-x: -{bgTranslation}%;" />
 
-<div id="base" class="w-screen h-[20%]" style="background-position-x: -{baseTranslation}%;" />
-
-<div class="w-screen h-screen absolute left-0 top-0">
-	<Pipe direction="to-up" />
-</div>
+<div id="base" class="w-screen h-[20%] z-20" style="background-position-x: -{baseTranslation}%;" />
 
 {#if isRunning}
 	<img
@@ -112,6 +150,14 @@
 		class="absolute left-[20%] w-[5%] object-contain transform"
 		style="top: {birdY}%; transform: rotate({birdPivot}deg);"
 	/>
+
+	{#each pipes as pipe}
+		<Pipe
+			direction={pipe.direction}
+			classes="absolute z-10"
+			css={`left: ${pipe.xPos}%; top: calc(${pipe.yPos})`}
+		/>
+	{/each}
 {/if}
 
 {#if !isRunning}

@@ -1,1 +1,5 @@
-// place files you want to import through the `$lib` alias in this folder.
+let GlobalVar = {
+	HAUTEUR_PIPE: '400px'
+};
+
+export default GlobalVar;

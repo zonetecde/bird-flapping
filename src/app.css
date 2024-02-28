@@ -8,6 +8,15 @@
 @tailwind utilities;
 
 body {
-	/*  load font in static/fonts/FlappybirdyRegular-KaBW.ttf */
 	font-family: 'FlappybirdyRegular-KaBW';
+}
+
+html::-webkit-scrollbar {
+	display: none;
+}
+
+html {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+	overflow-y: hidden;
 }

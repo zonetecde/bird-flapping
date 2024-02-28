@@ -1,7 +1,16 @@
 <script lang="ts">
-	export let direction: 'to-up' | 'to-down' = 'to-up';
+	import GlobalVar from '$lib';
 
-	$: style = `transform: rotate(${direction === 'to-up' ? 0 : 180}deg)`;
+	export let direction: 'UP' | 'DOWN' = 'UP';
+	export let classes: string = '';
+	export let css: string = '';
+
+	$: style = `transform: rotate(${direction === 'UP' ? 0 : 180}deg); ${css}`;
 </script>
 
-<img src="objects/pipe-green.png" alt="pipe" class="w-[4%]" {style} />
+<img
+	src="objects/pipe-green.png"
+	alt="pipe"
+	class="w-[4%] h-[{GlobalVar.HAUTEUR_PIPE}] {classes}"
+	{style}
+/>
