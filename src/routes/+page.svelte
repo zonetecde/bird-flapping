@@ -8,6 +8,7 @@
 	const BG_TRANSLATION_SPEED = 500;
 	const BASE_TRANSLATION_SPEED = 100;
 	const BIRD_VELOCITY = 200;
+	let chuteVitesseMultiplicateur = 1;
 
 	const GAME_HEIGHT = 600;
 	const GAME_WIDTH = 300;
@@ -61,6 +62,13 @@
 	}
 
 	function handleMouseDown(event: MouseEvent) {
+		// Vérifie que le target n'est pas un <a> ou un <img> ou boutton
+		if (
+			(event.target as HTMLElement).tagName === 'A' ||
+			(event.target as HTMLElement).tagName === 'BUTTON'
+		)
+			return;
+
 		if (event.button === 0) {
 			if (_gameOver) return;
 			if (!isRunning) startGame();
@@ -105,11 +113,18 @@
 				// L'oiseau descend
 				birdDirection = 'DOWN';
 
-				if (difference > BIRD_VELOCITY + BIRD_VELOCITY / 2) birdY += 0.5;
-				else birdY += 0.4;
+				if (difference > BIRD_VELOCITY + BIRD_VELOCITY / 2)
+					birdY += 0.5 * chuteVitesseMultiplicateur;
+				else if (difference > BIRD_VELOCITY + BIRD_VELOCITY / 3)
+					birdY += 0.4 * chuteVitesseMultiplicateur;
+				else birdY += 0.4 * chuteVitesseMultiplicateur;
+
+				chuteVitesseMultiplicateur += 0.07;
 
 				currentBirdImg = '/objects/yellowbird-downflap.png';
 			} else if (difference < BIRD_VELOCITY) {
+				chuteVitesseMultiplicateur = 1;
+
 				// L'oiseau monte
 				birdDirection = 'UP';
 
@@ -347,6 +362,10 @@
 		</div>
 	</div>
 </div>
+
+<a href="https://github.com/zonetecde/bird-flapping" target="_blank">
+	<img src="github.png" alt="GitHub" class="absolute top-2 right-2 w-16 h-16" />
+</a>
 
 <style>
 	#bg-behind {
