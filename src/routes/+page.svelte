@@ -115,8 +115,6 @@
 
 				if (difference > BIRD_VELOCITY + BIRD_VELOCITY / 2)
 					birdY += 0.5 * chuteVitesseMultiplicateur;
-				else if (difference > BIRD_VELOCITY + BIRD_VELOCITY / 3)
-					birdY += 0.4 * chuteVitesseMultiplicateur;
 				else birdY += 0.4 * chuteVitesseMultiplicateur;
 
 				chuteVitesseMultiplicateur += 0.07;
