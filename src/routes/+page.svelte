@@ -362,7 +362,7 @@
 </div>
 
 <a href="https://github.com/zonetecde/bird-flapping" target="_blank">
-	<img src="github.png" alt="GitHub" class="absolute top-2 right-2 w-16 h-16" />
+	<img src="github.png" alt="GitHub" class="absolute top-2 right-2 w-16 h-16 hidden lg:block" />
 </a>
 
 <style>
