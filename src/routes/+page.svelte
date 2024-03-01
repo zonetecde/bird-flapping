@@ -4,9 +4,12 @@
 	import { onDestroy, onMount } from 'svelte';
 	import GlobalVar, { randomInRange } from '$lib';
 
-	const BG_TRANSLATION_SPEED = 2000;
-	const BASE_TRANSLATION_SPEED = 800;
-	const BIRD_SPEED = 200;
+	const BG_TRANSLATION_SPEED = 500;
+	const BASE_TRANSLATION_SPEED = 100;
+	const BIRD_VELOCITY = 200;
+
+	const GAME_HEIGHT = 600;
+	const GAME_WIDTH = 300;
 
 	let pipes: PipeData[] = [];
 
@@ -16,26 +19,40 @@
 	let birdPivot = 0;
 	let birdDirection: 'UP' | 'DOWN';
 
-	let isRunning = true;
+	let isRunning = false;
 	let bgTranslation = 0;
 	let baseTranslation = 0;
 	let lastTimestamp: number | undefined;
+
+	let scale = 1; // La taille du jeu, par rapport à la taille de l'écran
 
 	onMount(() => {
 		window.onkeydown = handleKeyDown;
 		window.onmousedown = handleMouseDown;
 
 		addPipes();
+
+		window.onresize = () => {
+			scale = window.innerHeight / GAME_HEIGHT;
+		};
+
+		// simulate resize to set the scale
+		// @ts-ignore
+		window.onresize(null);
 	});
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.code === 'Space') {
+			if (!isRunning) startGame();
+
 			flap();
 		}
 	}
 
 	function handleMouseDown(event: MouseEvent) {
 		if (event.button === 0) {
+			if (!isRunning) startGame();
+
 			flap();
 		}
 	}
@@ -56,11 +73,6 @@
 			// Calcule la translation du fond d'écran en fonction du temps écoulé
 			bgTranslation += (4 * delta) / BG_TRANSLATION_SPEED;
 			baseTranslation += (4 * delta) / BASE_TRANSLATION_SPEED;
-			// Si la translation dépasse la largeur de l'image de fond, la réinitialise
-			if (bgTranslation >= 500) {
-				// Où 500 est le nombre dans background-size: 500px 100%;
-				bgTranslation -= 500;
-			}
 		}
 
 		if (lastFlapTimestamp) {
@@ -69,23 +81,23 @@
 
 			// Si la différence dépasse le temps que l'oiseau prend pour monter alors l'oiseau redescent
 			// Le + 5 sert à laisser l'oiseau sur place un petit peu
-			if (difference > BIRD_SPEED + 5) {
+			if (difference > BIRD_VELOCITY + 5) {
 				// L'oiseau descend
 				birdDirection = 'DOWN';
 
-				if (difference > BIRD_SPEED + BIRD_SPEED / 2) birdY += 0.5;
+				if (difference > BIRD_VELOCITY + BIRD_VELOCITY / 2) birdY += 0.5;
 				else birdY += 0.4;
 
 				currentBirdImg = '/objects/yellowbird-downflap.png';
-			} else if (difference < BIRD_SPEED) {
+			} else if (difference < BIRD_VELOCITY) {
 				// L'oiseau monte
 				birdDirection = 'UP';
 
 				currentBirdImg = '/objects/yellowbird-upflap.png';
 
-				if (difference < BIRD_SPEED / 3)
+				if (difference < BIRD_VELOCITY / 3)
 					birdY -= 0.8; // Vélocité
-				else if (difference < BIRD_SPEED / 2) birdY -= 0.65;
+				else if (difference < BIRD_VELOCITY / 2) birdY -= 0.65;
 				else birdY -= 0.5;
 			}
 
@@ -117,94 +129,98 @@
 		lastFlapTimestamp = new Date();
 	}
 
-	function getBaseY() {
-		// On fait commencer la hauteur du pipe de dessus selon la taille de la fenêtre
-		let window_height = window.innerHeight;
-
-		if (window_height < 500) return window_height / 0.6;
-		if (window_height < 700) return window_height / 0.9;
-		if (window_height < 1000) return window_height / 1.35;
-
-		return window_height / 3;
-	}
-
 	/**
 	 * Ajoute les pipes
 	 */
 	function addPipes() {
 		const HAUTEUR_ESPACE_PX = 180;
 
-		let xPos = 60; // Position de départ en pourcentage
+		let xPos = 280; // Position de départ en px
 
-		const maxY = window.innerHeight - window.innerHeight * 0.3 - HAUTEUR_ESPACE_PX - 30; // Où 30% = taille de la base
+		const maxY = 600 - window.innerHeight * 0.3 - 140; // Où 30% = taille de la base
 
 		for (let i = 0; i < 50; i++) {
 			// Position du pipe du haut
 			const randomY = randomInRange(0, maxY);
 
 			// Taille de l'espace
-			let diff = randomInRange(-65, 0);
+			let diff = randomInRange(-85, -20);
 
 			pipes = [
 				...pipes,
 				{
 					xPos: xPos,
 					// Calcul de la position du pipe du haut
-					yPos: `-${getBaseY()}px + ${randomY}px`,
+					yPos: `-750px  + ${randomY}px`,
 					direction: 'DOWN'
 				},
 				{
 					xPos: xPos,
 					// Calcul de la position du pipe du bas
-					yPos: `-${getBaseY()}px + ${GlobalVar.HAUTEUR_PIPE} + ${HAUTEUR_ESPACE_PX + diff}px + ${randomY}px`,
+					yPos: `-750px + ${GlobalVar.HAUTEUR_PIPE} + ${HAUTEUR_ESPACE_PX + diff}px + ${randomY}px`,
 					direction: 'UP'
 				}
 			];
 
-			xPos += 35; // Prochaine pipe dans 35%
+			xPos += randomInRange(180, 275); // Prochaine pipe espace
 		}
 	}
 </script>
 
-<div id="bg" class="w-screen h-screen" style="background-position-x: -{bgTranslation}%;" />
+<div class="w-screen h-screen flex items-center justify-center">
+	<div class="w-full h-full" id="bg-behind"></div>
 
-<div
-	id="base"
-	class="w-screen h-[20%] z-20"
-	style="background-position-x: -{baseTranslation * 1.3}%;"
-/>
-
-{#if isRunning}
-	<img
-		src={currentBirdImg}
-		alt="Bird"
-		class="absolute left-[20%] w-[50px] object-contain transform"
-		style="top: {birdY}%; transform: rotate({birdPivot}deg);"
-	/>
-
-	{#each pipes as pipe}
-		<Pipe
-			direction={pipe.direction}
-			classes="absolute z-10"
-			css={`left: calc(${pipe.xPos}% - ${baseTranslation}%); top: calc(${pipe.yPos})`}
-		/>
-	{/each}
-{/if}
-
-{#if !isRunning}
 	<div
-		class="absolute top-[20%] left-1/2 -translate-x-1/2 text-[#333052] bg-[#95cce2] py-12 rounded-3xl shadow-2xl shadow-blue-900 border-4 border-blue-950 w-4/6 xl:w-3/6 min-w-[400px] flex items-center flex-col"
+		class="absolute overflow-hidden outline outline-x-4 outline-[#1a361f]"
+		style={`transform: scale(${scale}); height: ${GAME_HEIGHT}px; width: ${GAME_WIDTH}px;`}
 	>
-		<p class="text-center text-[600%] lg:text-[800%]">Bird Flapping</p>
+		<div class="relative w-full h-full">
+			<div id="bg" class="w-full h-full" style="background-position-x: -{bgTranslation}%;" />
 
-		<button on:click={startGame} class="text-[#332b57] font-bold text-[600%]">Start</button>
+			<div
+				id="base"
+				class="w-full h-[20%] z-20"
+				style="background-position-x: {baseTranslation * 3}%;"
+			/>
+
+			<img
+				src={currentBirdImg}
+				alt="Bird"
+				class="absolute left-[20%] w-[50px] object-contain transform"
+				style="top: {birdY}%; transform: rotate({birdPivot}deg);"
+			/>
+
+			{#each pipes as pipe}
+				<Pipe
+					direction={pipe.direction}
+					classes="absolute z-10"
+					css={`left: calc(${pipe.xPos}px - ${baseTranslation}%); top: calc(${pipe.yPos})`}
+				/>
+			{/each}
+
+			{#if !isRunning}
+				<img
+					src="/UI/message2.png"
+					alt="Get ready"
+					class="absolute inset-0 w-full h-full z-30 object-contain px-10 pb-20"
+				/>
+			{/if}
+		</div>
 	</div>
-{/if}
+</div>
 
 <style>
+	#bg-behind {
+		background-image: url('/objects/background-day.png');
+		background-size: 25% 100%;
+		background-repeat: repeat-x;
+
+		filter: blur(10px);
+	}
+
 	#bg {
 		background-image: url('/objects/background-day.png');
-		background-size: 500px 100%;
+		background-size: 350px 100%;
 		background-repeat: repeat-x;
 	}
 
