@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type PipeData from '$lib/PipeData';
-	import Pipe from '$lib/Pipe.svelte';
+	import type PipeData from '$lib/pipeData';
+	import Pipe from '$lib/pipe.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import GlobalVar, { collide, randomInRange } from '$lib';
 	import { slide } from 'svelte/transition';
