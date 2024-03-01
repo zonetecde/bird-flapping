@@ -268,7 +268,7 @@
 	<div class="w-full h-full" id="bg-behind"></div>
 
 	<div
-		class="absolute overflow-hidden outline outline-x-4 outline-[#1a361f]"
+		class="absolute overflow-hidden outline outline-[#1a361f]"
 		style={`transform: scale(${scale}); height: ${GAME_HEIGHT}px; width: ${GAME_WIDTH}px;`}
 	>
 		<div class="relative w-full h-full">
