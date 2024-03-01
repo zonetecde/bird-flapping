@@ -2,7 +2,8 @@
 	import type PipeData from '$lib/PipeData';
 	import Pipe from '$lib/Pipe.svelte';
 	import { onDestroy, onMount } from 'svelte';
-	import GlobalVar, { randomInRange } from '$lib';
+	import GlobalVar, { collide, randomInRange } from '$lib';
+	import { slide } from 'svelte/transition';
 
 	const BG_TRANSLATION_SPEED = 500;
 	const BASE_TRANSLATION_SPEED = 100;
@@ -11,8 +12,17 @@
 	const GAME_HEIGHT = 600;
 	const GAME_WIDTH = 300;
 
-	let pipes: PipeData[] = [];
+	let _gameOver = false;
+	let gameOverVisibility = false; // Délai entre le momemnt où l'oiseau meurt et le moment où le game over s'affiche
+	let bestScore: number = 0;
 
+	let pipes: PipeData[] = [];
+	let nextPipeId = 1;
+	let score = 0;
+	let pipesScored: number[] = []; // Liste des pipes déjà passés
+	$: scoreList = score.toString().split('');
+
+	let bird: HTMLElement;
 	let birdY = 50;
 	let currentBirdImg = '/objects/yellowbird-midflap.png';
 	let lastFlapTimestamp: Date;
@@ -43,6 +53,7 @@
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.code === 'Space') {
+			if (_gameOver) return;
 			if (!isRunning) startGame();
 
 			flap();
@@ -51,6 +62,7 @@
 
 	function handleMouseDown(event: MouseEvent) {
 		if (event.button === 0) {
+			if (_gameOver) return;
 			if (!isRunning) startGame();
 
 			flap();
@@ -67,6 +79,14 @@
 	 * @param {number} timestamp - Horodatage actuel.
 	 */
 	function mainLoop(timestamp: number) {
+		if (_gameOver) {
+			// L'oiseau est mort (n'est pas appelé avant que le jeu ne commence)
+			currentBirdImg = '/objects/yellowbird-dead.png';
+			return;
+		}
+
+		if (!isRunning) return;
+
 		if (lastTimestamp) {
 			// Calcule la différence de temps entre les horodatages
 			const delta = timestamp - lastTimestamp;
@@ -108,6 +128,42 @@
 			if (birdDirection === 'DOWN') {
 				if (birdPivot <= 16) birdPivot += 4;
 			}
+
+			// Update pipes position
+			pipes = pipes.map((pipe) => {
+				pipe.xPos -= 2;
+
+				return pipe;
+			});
+
+			// Update score & and check for collision
+			pipes.forEach((pipe) => {
+				// Si le pipe est passé (ne prend en compte que les pipes du haut pour éviter les doublons)
+				if (pipe.direction === 'DOWN' && pipe.xPos < 0 && !pipesScored.includes(pipe.id)) {
+					score++;
+					pipesScored.push(pipe.id);
+				}
+
+				// Delete pipes that are out of the screen
+				if (pipe.xPos < -60) {
+					pipes = pipes.filter((p) => p.id !== pipe.id);
+				}
+
+				// Check for collision
+				const pipeElement = document.getElementById(`pipe-${pipe.id}`);
+				if (pipeElement && collide(bird, pipeElement)) {
+					gameOver();
+				}
+
+				// Vérifie si l'oiseau est sorti de l'écran ou a touché le sol
+				if (birdY < 0 || birdY > 74) {
+					gameOver();
+				}
+			});
+
+			if (pipes.length < 4) {
+				addPipes();
+			}
 		}
 
 		// Met à jour lastTimestamp avec l'horodatage actuel
@@ -117,6 +173,27 @@
 		requestAnimationFrame(mainLoop);
 	}
 
+	/**
+	 * Fonction appelée lorsque le jeu est terminé
+	 */
+	function gameOver() {
+		bestScore = Number(localStorage.getItem('bestScore')) || 0;
+		if (score > bestScore) {
+			bestScore = score;
+			localStorage.setItem('bestScore', bestScore.toString());
+		}
+
+		isRunning = false;
+		_gameOver = true;
+
+		setTimeout(() => {
+			gameOverVisibility = true;
+		}, 2000);
+	}
+
+	/**
+	 * Fait monter l'oiseau
+	 */
 	function flap() {
 		if (!isRunning) {
 			return;
@@ -135,11 +212,12 @@
 	function addPipes() {
 		const HAUTEUR_ESPACE_PX = 180;
 
-		let xPos = 280; // Position de départ en px
+		// Si on a déjà des pipes, on l'ajoute en dehors de l'écran
+		let xPos = pipes.length === 0 ? 280 : 420; // Position de la première pipe
 
 		const maxY = 600 - window.innerHeight * 0.3 - 140; // Où 30% = taille de la base
 
-		for (let i = 0; i < 50; i++) {
+		for (let i = 0; i < 5; i++) {
 			// Position du pipe du haut
 			const randomY = randomInRange(0, maxY);
 
@@ -152,18 +230,37 @@
 					xPos: xPos,
 					// Calcul de la position du pipe du haut
 					yPos: `-750px  + ${randomY}px`,
-					direction: 'DOWN'
+					direction: 'DOWN',
+					id: nextPipeId + 1
 				},
 				{
 					xPos: xPos,
 					// Calcul de la position du pipe du bas
 					yPos: `-750px + ${GlobalVar.HAUTEUR_PIPE} + ${HAUTEUR_ESPACE_PX + diff}px + ${randomY}px`,
-					direction: 'UP'
+					direction: 'UP',
+					id: nextPipeId + 2
 				}
 			];
 
+			nextPipeId += 2;
+
 			xPos += randomInRange(180, 275); // Prochaine pipe espace
 		}
+	}
+
+	function playAgainButtonClicked(
+		event: MouseEvent & { currentTarget: EventTarget & HTMLButtonElement }
+	) {
+		pipes = [];
+		addPipes();
+		isRunning = false;
+		_gameOver = false;
+		birdY = 50;
+		score = 0;
+		currentBirdImg = '/objects/yellowbird-midflap.png';
+		birdPivot = 0;
+		gameOverVisibility = false;
+		pipesScored = [];
 	}
 </script>
 
@@ -186,24 +283,66 @@
 			<img
 				src={currentBirdImg}
 				alt="Bird"
-				class="absolute left-[20%] w-[50px] object-contain transform"
+				bind:this={bird}
+				class={'absolute left-[20%] w-[50px] object-contain transform ' +
+					(GlobalVar.DEBUG ? 'bg-green-800' : '')}
 				style="top: {birdY}%; transform: rotate({birdPivot}deg);"
 			/>
 
-			{#each pipes as pipe}
+			{#each pipes as pipe (pipe.id)}
 				<Pipe
+					id={pipe.id}
 					direction={pipe.direction}
 					classes="absolute z-10"
-					css={`left: calc(${pipe.xPos}px - ${baseTranslation}%); top: calc(${pipe.yPos})`}
+					css={`left: calc(${pipe.xPos}px); top: calc(${pipe.yPos})`}
 				/>
 			{/each}
 
-			{#if !isRunning}
+			{#if !isRunning && !_gameOver}
 				<img
 					src="/UI/message2.png"
 					alt="Get ready"
 					class="absolute inset-0 w-full h-full z-30 object-contain px-10 pb-20"
 				/>
+			{:else if isRunning || _gameOver}
+				<!-- Affichage du score -->
+				<div class="absolute top-4 flex flex-row w-full justify-center gap-x-0.5 z-50">
+					{#each scoreList as digit}
+						<img src={`/UI/Numbers/${digit}.png`} alt={digit} class="w-6 h-6" />
+					{/each}
+				</div>
+			{/if}
+			{#if gameOverVisibility}
+				<div
+					transition:slide
+					class="z-50 absolute inset-0 flex items-center justify-center w-full h-full"
+				>
+					<div
+						class="w-10/12 h-3/5 bg-[#cec590] border-4 border-[#a09975] rounded-2xl bg-opacity-95 flex items-center justify-center py-5 px-3 flex-col monospace"
+					>
+						<img src="/UI/gameover.png" alt="Game over" class="h-16 object-contain" />
+
+						<div
+							class="bg-[#22684b57] border-4 border-[#1b323681] rounded-full mt-auto text-center px-8 py-1"
+						>
+							<p class="text-lg font-bold">Best score :</p>
+							<p class="text-3xl font-bold">{bestScore}</p>
+						</div>
+						<div
+							class="bg-[#1855a557] border-4 border-[#1855a557] rounded-full mt-auto text-center px-8 py-1"
+						>
+							<p class="text-base font-bold">Score :</p>
+							<p class="text-xl font-bold">{score}</p>
+						</div>
+
+						<button
+							class="mt-auto w-3/4 h-12 bg-[#848a4e] border-2 border-[#5a5641] text-xl rounded-lg text-[#16180b] font-bold"
+							on:click={playAgainButtonClicked}
+						>
+							Play again
+						</button>
+					</div>
+				</div>
 			{/if}
 		</div>
 	</div>
