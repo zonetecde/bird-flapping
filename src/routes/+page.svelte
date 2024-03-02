@@ -8,7 +8,7 @@
 	const BG_TRANSLATION_SPEED = 500;
 	const BASE_TRANSLATION_SPEED = 100;
 	const BIRD_VELOCITY = 200;
-	let chuteVitesseMultiplicateur = 1;
+	let chuteVitesseMultiplicateur = 0.5;
 
 	const GAME_HEIGHT = 600;
 	const GAME_WIDTH = 300;
@@ -121,7 +121,7 @@
 
 				currentBirdImg = '/objects/yellowbird-downflap.png';
 			} else if (difference < BIRD_VELOCITY) {
-				chuteVitesseMultiplicateur = 1;
+				chuteVitesseMultiplicateur = 0.5;
 
 				// L'oiseau monte
 				birdDirection = 'UP';
