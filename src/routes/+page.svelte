@@ -4,6 +4,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import GlobalVar, { collide, randomInRange } from '$lib';
 	import { slide } from 'svelte/transition';
+	import { PlayAudio } from '$lib/audio';
 
 	const BG_TRANSLATION_SPEED = 500;
 	const BASE_TRANSLATION_SPEED = 100;
@@ -155,6 +156,7 @@
 				if (pipe.direction === 'DOWN' && pipe.xPos < 0 && !pipesScored.includes(pipe.id)) {
 					score++;
 					pipesScored.push(pipe.id);
+					PlayAudio('/audio/point.wav');
 				}
 
 				// Delete pipes that are out of the screen
@@ -190,6 +192,7 @@
 	 * Fonction appelée lorsque le jeu est terminé
 	 */
 	function gameOver() {
+		PlayAudio('/audio/hit.wav');
 		bestScore = Number(localStorage.getItem('bestScore')) || 0;
 		if (score > bestScore) {
 			bestScore = score;
@@ -211,6 +214,8 @@
 		if (!isRunning) {
 			return;
 		}
+
+		PlayAudio('/audio/wing.wav');
 
 		// Si c'est le premier flap
 		if (!lastTimestamp) requestAnimationFrame(mainLoop);
